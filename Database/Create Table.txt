@@ -1,0 +1,280 @@
+BEGIN
+
+FOR c IN (SELECT table_name FROM user_tables) LOOP
+    EXECUTE IMMEDIATE ('DROP TABLE "' || c.table_name || '" CASCADE CONSTRAINTS');
+END LOOP;
+
+FOR s IN (SELECT sequence_name FROM user_sequences) LOOP
+    EXECUTE IMMEDIATE ('DROP SEQUENCE ' || s.sequence_name);
+END LOOP;
+
+FOR s IN (SELECT trigger_name FROM user_triggers) LOOP
+    EXECUTE IMMEDIATE ('DROP TRIGGER ' || s.trigger_name);
+END LOOP;
+
+END;
+/
+
+CREATE TABLE USERS (
+    userID number,
+    firstName varchar2(50) NOT NULL,
+    lastName varchar2(50) NOT NULL,
+    password varchar2(50) NOT NULL,
+    email varchar2(50) NOT NULL,
+    phoneNumber number NOT NULL,
+    cnic number NOT NULL,
+    address varchar2(255),
+    profilePicture BLOB
+);
+
+CREATE TABLE PASSENGER (
+    userID number,
+    passengerID number
+);
+
+CREATE TABLE ADMIN (
+    userID number,
+    adminID number
+);
+
+CREATE TABLE EMPLOYEE (
+    userID number,
+    employeeID number,
+    role varchar2(50),
+    salary number DEFAULT (0),
+    joiningDate Date
+);
+
+CREATE TABLE SALARY_RECORD (
+    salaryID number,
+    employeeID number,
+    salaryDate Date,
+    amount number,
+    taskCount number,
+    paidStatus varchar2(20)
+);
+
+CREATE TABLE TASKS (
+    taskID number,
+    taskName varchar2(50) NOT NULL,
+    description varchar2(255),
+    dueDate varchar2(50),
+    taskStatus varchar2(20),
+    pay number
+);
+
+CREATE TABLE ASSIGNED_TASK (
+    employeeID number,
+    taskID number
+);
+
+CREATE TABLE TICKET_RESERVATION (
+    ticketReservationID number,
+    seatID number,
+    trainID number,
+    classID number,
+    scheduleID number,
+    passengerID number,
+    employeeID number,
+    bookingDate Date,
+    reservationStatus varchar2(20),
+    fare number,
+    soldStatus varchar2(20)
+);
+
+CREATE TABLE TRAIN (
+    trainID number,
+    trainName varchar2(50) NOT NULL,
+    trainPicture blob
+);
+
+CREATE TABLE TRAIN_SCHEDULE (
+    scheduleID number,
+    trainID number,
+    routeID number,
+    scheduleName varchar2(50) NOT NULL,
+    scheduleStatus varchar2(20),
+    departureDate Date,
+    baseFare number
+);
+
+CREATE TABLE ROUTE (
+    routeID number,
+    routeName varchar2(255) NOT NULL
+);
+
+CREATE TABLE STOP (
+    routeID number,
+    stationID number,
+    arrivalTime varchar2(50),
+    departureTime varchar2(50)
+);
+
+CREATE TABLE STATION (
+    stationID number,
+    stationNo number NOT NULL,
+    stationName varchar2(50) NOT NULL,
+    city varchar2(50),
+    country varchar2(50)
+);
+
+CREATE TABLE CUSTOMER_SERVICE (
+    ID number,
+    passengerID number,
+    trainID number,
+    employeeID number,
+    scheduleID number,
+    submissionDate Date,
+    description varchar2(255),
+    response varchar2(255),
+    serviceType varchar2(20)
+);
+
+CREATE TABLE SEAT (
+    seatID number,
+    classID number,
+    trainID number
+);
+
+CREATE TABLE TRAIN_CLASS (
+    classID number,
+    classType varchar2(50) NOT NULL,
+    fareMultiplier number DEFAULT (1)
+);
+
+ALTER TABLE USERS
+    ADD CONSTRAINT PK_USERS                 PRIMARY KEY (userID)
+    ADD CONSTRAINT UNIQUE_EMAIL             UNIQUE (email)
+    ADD CONSTRAINT UNIQUE_CNIC              UNIQUE (cnic)
+    ADD CONSTRAINT UNIQUE_PHONE_NUMBER      UNIQUE (phoneNumber);
+
+ALTER TABLE PASSENGER
+    ADD CONSTRAINT PK_P                     PRIMARY KEY (passengerID)
+    ADD CONSTRAINT FK_USERS_P               FOREIGN KEY (userID) REFERENCES USERS (userID);
+
+ALTER TABLE ADMIN
+    ADD CONSTRAINT PK_ADMIN                 PRIMARY KEY (adminID)
+    ADD CONSTRAINT FK_USERS_A               FOREIGN KEY (userID) REFERENCES USERS (userID);
+
+ALTER TABLE EMPLOYEE
+    ADD CONSTRAINT PK_EMPLOYEE              PRIMARY KEY (employeeID)
+    ADD CONSTRAINT FK_USERS_E               FOREIGN KEY (userID) REFERENCES USERS (userID)
+    ADD CONSTRAINT CHECK_ROLE               CHECK (role in ('Driver', 'Cashier', 'Customer Support'));
+
+ALTER TABLE SALARY_RECORD
+    ADD CONSTRAINT PK_SALARY_RECORD         PRIMARY KEY (salaryID)
+    ADD CONSTRAINT FK_EMPLOYEE_SR           FOREIGN KEY (employeeID) REFERENCES EMPLOYEE (employeeID)
+    ADD CONSTRAINT CHECK_PAID_STATUS        CHECK (paidStatus in ('Paid', 'Unpaid'));
+
+ALTER TABLE TASKS
+    ADD CONSTRAINT PK_TASKS                 PRIMARY KEY (taskID)
+    ADD CONSTRAINT CHECK_TASK_STATUS        CHECK (taskStatus in ('Completed', 'Incomplete'))
+    ADD CONSTRAINT UNIQUE_TASK_NAME         UNIQUE (taskName);
+
+ALTER TABLE ASSIGNED_TASK
+    ADD CONSTRAINT PK_ASSIGNED_TASK         PRIMARY KEY (employeeID, taskID)
+    ADD CONSTRAINT FK_EMPLOYEE_AT           FOREIGN KEY (employeeID) REFERENCES EMPLOYEE (employeeID)
+    ADD CONSTRAINT FK_TASKS_AT              FOREIGN KEY (taskID) REFERENCES TASKS (taskID);
+
+ALTER TABLE TRAIN
+    ADD CONSTRAINT PK_TRAIN                 PRIMARY KEY (trainID)
+    ADD CONSTRAINT UNIQUE_TRAIN_NAME        UNIQUE (trainName);
+
+ALTER TABLE STATION
+    ADD CONSTRAINT PK_STATION               PRIMARY KEY (stationID)
+    ADD CONSTRAINT UNIQUE_STATION_NAME      UNIQUE (stationName)
+    ADD CONSTRAINT UNIQUE_STATION_NO        UNIQUE (stationNo);
+
+ALTER TABLE TRAIN_CLASS
+    ADD CONSTRAINT PK_TRAIN_CLASS           PRIMARY KEY (classID)
+    ADD CONSTRAINT UNIQUE_CLASS_TYPE        UNIQUE (classType);
+
+ALTER TABLE SEAT
+    ADD CONSTRAINT PK_SEAT                  PRIMARY KEY (seatID, trainID, classID)
+    ADD CONSTRAINT FK_TRAIN_S               FOREIGN KEY (trainID) REFERENCES TRAIN (trainID)
+    ADD CONSTRAINT FK_TRAIN_CLASS_S         FOREIGN KEY (classID) REFERENCES TRAIN_CLASS (classID);
+
+ALTER TABLE ROUTE
+    ADD CONSTRAINT PK_ROUTE                 PRIMARY KEY (routeID)
+    ADD CONSTRAINT UNIQUE_ROUTE_NAME        UNIQUE (routeName);
+
+ALTER TABLE STOP
+    ADD CONSTRAINT PK_STOP                  PRIMARY KEY (stationID, routeID)
+    ADD CONSTRAINT FK_STATION_ST            FOREIGN KEY (stationID) REFERENCES STATION (stationID)
+    ADD CONSTRAINT FK_ROUTE_ST              FOREIGN KEY (routeID) REFERENCES ROUTE (routeID);
+
+ALTER TABLE TRAIN_SCHEDULE
+    ADD CONSTRAINT PK_TRAIN_SCHEDULE        PRIMARY KEY (scheduleID, trainID)
+    ADD CONSTRAINT FK_TRAIN_TS              FOREIGN KEY (trainID) REFERENCES TRAIN (trainID)
+    ADD CONSTRAINT FK_ROUTE_TS              FOREIGN KEY (routeID) REFERENCES ROUTE (routeID)
+    ADD CONSTRAINT UNIQUE_SCHEDULE_NAMEDATE UNIQUE (scheduleName, departureDate)
+    ADD CONSTRAINT CHECK_SCHEDULE_STATUS    CHECK (scheduleStatus in ('On Time', 'Delayed', 'Cancelled'));
+
+ALTER TABLE CUSTOMER_SERVICE
+    ADD CONSTRAINT PK_CUSTOMER_SERVICE      PRIMARY KEY (ID)
+    ADD CONSTRAINT FK_PASSENGER_CS          FOREIGN KEY (passengerID) REFERENCES PASSENGER (passengerID)
+    ADD CONSTRAINT FK_TRAIN_CS              FOREIGN KEY (trainID) REFERENCES TRAIN (trainID)
+    ADD CONSTRAINT FK_EMPLOYEE_CS           FOREIGN KEY (employeeID) REFERENCES EMPLOYEE (employeeID)
+    ADD CONSTRAINT FK_TRAIN_SCHEDULE_CS     FOREIGN KEY (scheduleID, trainID) REFERENCES TRAIN_SCHEDULE (scheduleID, trainID)
+    ADD CONSTRAINT CHECK_SERVICE_TYPE       CHECK (serviceType in ('Inquiry', 'Complaint', 'Feedback'));
+
+ALTER TABLE TICKET_RESERVATION
+    ADD CONSTRAINT PK_TICKET_RESERVATION    PRIMARY KEY (ticketReservationID)
+    ADD CONSTRAINT FK_SEAT_TR               FOREIGN KEY (seatID, trainID, classID) REFERENCES SEAT (seatID, trainID, classID)
+    ADD CONSTRAINT FK_TRAIN_SCHEDULE_TR     FOREIGN KEY (scheduleID, trainID) REFERENCES TRAIN_SCHEDULE (scheduleID, trainID)
+    ADD CONSTRAINT FK_PASSENGER_TR          FOREIGN KEY (passengerID) REFERENCES PASSENGER (passengerID)
+    ADD CONSTRAINT FK_EMPLOYEE_TR           FOREIGN KEY (employeeID) REFERENCES EMPLOYEE (employeeID)
+    ADD CONSTRAINT CHECK_RESERVATION_STATUS CHECK (reservationStatus in ('Cancelled', 'Active'))
+    ADD CONSTRAINT CHECK_SOLD_STATUS        CHECK (soldStatus in ('Sold', 'Not Sold'))
+    ADD CONSTRAINT UNIQUE_TICKETSALE        UNIQUE (seatID, trainID, classID, scheduleID);
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+CREATE OR REPLACE TRIGGER update_salary
+    AFTER UPDATE OF TASKSTATUS ON TASKS
+    FOR EACH ROW
+    WHEN (NEW.TASKSTATUS = 'Completed')
+BEGIN
+   UPDATE EMPLOYEE E
+   SET salary = salary + :NEW.PAY
+   WHERE employeeid = ANY (SELECT employeeid FROM ASSIGNED_TASK WHERE taskID = :NEW.taskid);
+END;
+/
+    
+CREATE OR REPLACE PROCEDURE reset_salary AS
+BEGIN
+   INSERT INTO Salary_Record (EMPLOYEEID, SALARYDATE, AMOUNT, TASKCOUNT, PAIDSTATUS)
+   SELECT employeeid, CURRENT_DATE , salary, (SELECT COUNT (AT.TASKID) AS TASKCOUNT FROM ASSIGNED_TASK AT INNER JOIN TASKS T ON T.TASKID = AT.TASKID WHERE E.EMPLOYEEID = AT.EMPLOYEEID AND EXTRACT(MONTH FROM to_date(T.DUEDATE, 'mm/dd/yyyy')) = EXTRACT(MONTH FROM ADD_MONTHS(to_date(CURRENT_DATE, 'mm/dd/yyyy'), -1)) AND EXTRACT(YEAR FROM to_date(T.DUEDATE, 'mm/dd/yyyy')) = EXTRACT(YEAR FROM ADD_MONTHS(to_date(CURRENT_DATE, 'mm/dd/yyyy'), -1))) AS TASKCOUNT, 'Unpaid' AS STATUS FROM EMPLOYEE E;
+   UPDATE EMPLOYEE
+   SET salary = 0;
+END;
+/
+    
+BEGIN
+   DBMS_SCHEDULER.create_job (
+      job_name        => 'reset_salary_job',
+      job_type        => 'PLSQL_BLOCK',
+      job_action      => 'BEGIN reset_salary; END;',
+      start_date      => TRUNC(SYSDATE, 'MM') + INTERVAL '1' MONTH,
+      repeat_interval => 'FREQ=MONTHLY; BYMONTHDAY=1;',
+      enabled         => TRUE);
+END;
+/​
