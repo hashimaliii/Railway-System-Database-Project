@@ -1,4 +1,4 @@
-# Railway-System-Database-Project by Hashim Ali & Waleed Ahmed
+# Railway-System-Database-Project
 The Railway Management System (RMS) is designed to automate and streamline the operations of a railway network. It aims to provide efficient ticketing, scheduling, and management services for both passengers and railway staff. The system will include features for ticket reservation, train scheduling, seat allocation, fare calculation, safety monitoring, and customer support.
 
 1. User Authentication:
